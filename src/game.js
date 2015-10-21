@@ -20,9 +20,14 @@ var computerHand = [];
 var computerTricks = [];
 var computerSeen = [];
 var trump = "";
+var rememberTrump = "";
 var leadPlayed = "";
 var followPlayed = "";
+
+// Game variables
 var humanOnLead = true;
+var stockClosed = false;
+var endGame = false;
 
 // Point variables
 var humanTrickPoints = 0;
@@ -59,7 +64,9 @@ function home() {
 			deck = shuffleCards();
 			humanHand = [deck[3], deck[4], deck[5], deck[9], deck[10]];
 			computerHand = [deck[0], deck[1], deck[2], deck[7], deck[8]];
+			computerSeen = computerHand;
 			trump = deck[6];
+			rememberTrump = trump;
 			deckPointer = 11;
 
 			// Remove this event handler so this code doesn't run in main game
@@ -78,19 +85,26 @@ function home() {
 function update() {
 	clickLogged = false;
 
-	// Clear Screen
+	// Clear Canvas
 	ctx.fillStyle = "green";
 	ctx.fillRect(0, 0, canvas.width, canvas.height);
 
 	ctx.fillStyle = "black";
 
 	// Draw Deck
-	ctx.drawImage(cards, CARDS["BACK"].X, CARDS["BACK"].Y, CARD_WIDTH, CARD_HEIGHT,
-		DECK_X, DECK_Y, CARD_WIDTH, CARD_HEIGHT);
+	if (stockClosed) {
+		ctx.drawImage(cards, CARDS[rememberTrump].X, CARDS[rememberTrump].Y, CARD_WIDTH, CARD_HEIGHT,
+			DECK_X, DECK_Y, CARD_WIDTH, CARD_HEIGHT);
+	} else if (!endGame) {
+		ctx.drawImage(cards, CARDS["BACK"].X, CARDS["BACK"].Y, CARD_WIDTH, CARD_HEIGHT,
+			DECK_X, DECK_Y, CARD_WIDTH, CARD_HEIGHT);
+	}
 
 	// Draw Trump
-	ctx.drawImage(cards, CARDS[trump].X, CARDS[trump].Y, CARD_WIDTH, CARD_HEIGHT,
-		TRUMP_X, TRUMP_Y, CARD_WIDTH, CARD_HEIGHT);
+	if (!endGame) {
+		ctx.drawImage(cards, CARDS[trump].X, CARDS[trump].Y, CARD_WIDTH, CARD_HEIGHT,
+			TRUMP_X, TRUMP_Y, CARD_WIDTH, CARD_HEIGHT);
+	}
 
 	// Draw Player Hand
 	for (var i = 0; i < humanHand.length; i++) {
@@ -146,8 +160,8 @@ function update() {
 
 	// Draw text
 	ctx.font = TITLE_FONT;
-	ctx.fillText("You", 720, 560);
-	ctx.fillText("Computer", 670, 50);
+	ctx.fillText("You", HUMAN_NAME_X, HUMAN_NAME_Y);
+	ctx.fillText("Computer", COMPUTER_NAME_X, COMPUTER_NAME_Y);
 
 	// Draw score
 	ctx.font = MAIN_FONT;
@@ -167,6 +181,7 @@ function update() {
 			var yClick = getYClick(e);
 
 			// Check all clickable objects for click
+			// If card clicked, play it.
 			if (clickedCard1(xClick, yClick)) {
 				playCard(0);
 			} else if (clickedCard2(xClick, yClick)) {
@@ -197,38 +212,80 @@ function playCard(cardNum) {
 		followPlayed = card;
 	}
 
+	// Let person see cards played for 2 seconds before putting them away
 	setTimeout(decideWinner, 2000);
 }
 
+// Compare the two played cards, chose the winner, and follow post-trick procedure
 function decideWinner() {
 	var leadWon = true;
 
+	// Follower wins if cards are same suit and follower has higher value or follower trumps lead
 	if ((CARDS[followPlayed].suit == CARDS[leadPlayed].suit && CARDS[followPlayed].value > CARDS[leadPlayed].value) || 
-			CARDS[followPlayed].suit == CARDS[trump].suit && CARDS[leadPlayed].suit != CARDS[trump].suit) {
+			CARDS[followPlayed].suit == CARDS[rememberTrump].suit && CARDS[leadPlayed].suit != CARDS[rememberTrump].suit) {
 		leadWon = false;
 	}
 
+	// Decide what cards to give to who and who new lead is
 	if (humanOnLead == leadWon) {
+		// Human won, give cards to them
 		humanTricks.push(leadPlayed, followPlayed);
 		humanTrickPoints += CARDS[leadPlayed].value + CARDS[followPlayed].value;
 		leadPlayed = "";
 		followPlayed = "";
-		humanHand.push(deck[deckPointer]);
-		computerHand.push(deck[deckPointer + 1]);
-		deckPointer += 2;
+
+		// Don't deal more cards if there are no more cards left
+		if (deckPointer < 21) {
+			if (deckPointer == 19) {
+				// Deal out last two cards
+				humanHand.push(deck[deckPointer]);
+				computerHand.push(trump);
+				trump = "";
+				endGame = true;
+			} else {
+				// Deal cards normally
+				humanHand.push(deck[deckPointer]);
+				computerHand.push(deck[deckPointer + 1]);
+			}
+
+			deckPointer += 2;
+		}
+
+		// Set human lead for next trick
+		humanOnLead = true;
 	} else {
+		// Computer won, give cards to it
 		computerTricks.push(leadPlayed, followPlayed);
 		computerTrickPoints += CARDS[leadPlayed].value + CARDS[followPlayed].value;
 		leadPlayed = "";
 		followPlayed = "";
-		computerHand.push(deck[deckPointer]);
-		humanHand.push(deck[deckPointer + 1]);
-		deckPointer += 2;
+
+		// Don't deal more cards if there are no more cards left
+		if (deckPointer < 21) {
+			if (deckPointer == 19) {
+				// Deal out last two cards
+				humanHand.push(deck[deckPointer]);
+				computerHand.push(trump);
+				trump = "";
+				endGame = true;
+			} else {
+				// Deal cards normally
+				humanHand.push(deck[deckPointer]);
+				computerHand.push(deck[deckPointer + 1]);
+			}
+
+			deckPointer += 2;
+		}
+
+		// Set computer lead for next trick, and have computer play
+		humanOnLead = false;
+		computerPlayLead();
 	}
 }
 
+// Logic for computer to play following the human
 function computerPlayFollow() {
-	// Play higher cards of same suit
+	// First, play higher cards of same suit
 	for (var i = 0; i < computerHand.length; i++) {
 		if (CARDS[computerHand[i]].suit == CARDS[leadPlayed].suit && CARDS[computerHand[i]].value > CARDS[leadPlayed].value) {
 			var card = computerHand.splice(i, 1)[0];
@@ -237,11 +294,11 @@ function computerPlayFollow() {
 		}
 	}
 
-	// Otherwise, play lowest card
+	// Otherwise, play lowest card not of trump suit
 	var lowest = 12;  // Arbitrary value
 	var lowestCard = 0;
 	for (var i = 0; i < computerHand.length; i++) {
-		if (CARDS[computerHand[i]].value < lowest && CARDS[computerHand[i]].suit != CARDS[trump].suit) {
+		if (CARDS[computerHand[i]].value < lowest && CARDS[computerHand[i]].suit != CARDS[rememberTrump].suit) {
 			lowestCard = i;
 			lowest = CARDS[computerHand[i]].value;
 		}
@@ -250,18 +307,32 @@ function computerPlayFollow() {
 	followPlayed = card;
 }
 
+// Logic for computer to play while on lead
 function computerPlayLead() {
-
+	// Always play lowest card not of trump suit
+	var lowest = 12;  // Arbitrary value
+	var lowestCard = 0;
+	for (var i = 0; i < computerHand.length; i++) {
+		if (CARDS[computerHand[i]].value < lowest && CARDS[computerHand[i]].suit != CARDS[rememberTrump].suit) {
+			lowestCard = i;
+			lowest = CARDS[computerHand[i]].value;
+		}
+	}
+	var card = computerHand.splice(lowestCard, 1)[0];
+	leadPlayed = card;
 }
 
+// Return the X position of the click relative to the canvas
 function getXClick(e) {
 	return e.pageX - $("#gameCanvas").offset().left + $("#gameCanvas").scrollLeft();
 }
 
+// Return the Y position of the click relative to the canvas
 function getYClick(e) {
 	return e.pageY - $("#gameCanvas").offset().top + $("#gameCanvas").scrollTop();
 }
 
+// Shuffle and return an array of cards
 function shuffleCards() {
 	var cards = ["JACK_C", "QUEEN_C", "KING_C", "TEN_C", "ACE_C", "JACK_S", "QUEEN_S", "KING_S", "TEN_S", "ACE_S",
 			"JACK_H", "QUEEN_H", "KING_H", "TEN_H", "ACE_H", "JACK_D", "QUEEN_D", "KING_D", "TEN_D", "ACE_D"];
@@ -277,26 +348,32 @@ function shuffleCards() {
 	return cards;
 }
 
+// Return a random integer between the min (inclusive) and max (inclusive)
 function getRandomInt(min, max) {
 	return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// Return whether the x and y position of a click match position of card 1
 function clickedCard1(x, y) {
 	return x >= 220 && x <= 291 && y >= 380 && y <= 476;
 }
 
+// Return whether the x and y position of a click match position of card 2
 function clickedCard2(x, y) {
 	return x >= 296 && x <= 367 && y >= 380 && y <= 476;
 }
 
+// Return whether the x and y position of a click match position of card 3
 function clickedCard3(x, y) {
 	return x >= 372 && x <= 443 && y >= 380 && y <= 476;
 }
 
+// Return whether the x and y position of a click match position of card 4
 function clickedCard4(x, y) {
 	return x >= 448 && x <= 519 && y >= 380 && y <= 476;
 }
 
+// Return whether the x and y position of a click match position of card 5
 function clickedCard5(x, y) {
 	return x >= 524 && x <= 595 && y >= 380 && y <= 476;
 }

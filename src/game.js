@@ -285,30 +285,79 @@ function decideWinner() {
 
 // Logic for computer to play following the human
 function computerPlayFollow() {
-	// First, play higher cards of same suit
-	for (var i = 0; i < computerHand.length; i++) {
-		if (CARDS[computerHand[i]].suit == CARDS[leadPlayed].suit && CARDS[computerHand[i]].value > CARDS[leadPlayed].value) {
-			var card = computerHand.splice(i, 1)[0];
-			followPlayed = card;
-			return;
-		}
-	}
 
-	// Otherwise, play lowest card not of trump suit
-	var lowest = 12;  // Arbitrary value
-	var lowestCard = 0;
-	for (var i = 0; i < computerHand.length; i++) {
-		if (CARDS[computerHand[i]].value < lowest && CARDS[computerHand[i]].suit != CARDS[rememberTrump].suit) {
-			lowestCard = i;
-			lowest = CARDS[computerHand[i]].value;
+	// Different rules for playing based on endgame or not
+	if (endGame) {
+
+		// Must play card of same suit and higher value if possible
+		for (var i = 0; i < computerHand.length; i++) {
+			if (CARDS[computerHand[i]].suit == CARDS[leadPlayed].suit && CARDS[computerHand[i]].value > CARDS[leadPlayed].value) {
+				var card = computerHand.splice(i, 1)[0];
+				followPlayed = card;
+				return;
+			}
 		}
+
+		// Then must play card of same suit and lower value if possible
+		for (var i = 0; i < computerHand.length; i++) {
+			if (CARDS[computerHand[i]].suit == CARDS[leadPlayed].suit) {
+				var card = computerHand.splice(i, 1)[0];
+				followPlayed = card;
+				return;
+			}
+		}
+
+		// Then must trump if possible
+		for (var i = 0; i < computerHand.length; i++) {
+			if (CARDS[computerHand[i]].suit == CARDS[rememberTrump].suit) {
+				var card = computerHand.splice(i, 1)[0];
+				followPlayed = card;
+				return;
+			}
+		}
+
+		// Then play any card, preferably of lowest value (because computer will lose)
+		var lowest = 12;  // Arbitrary value
+		var lowestCard = 0;
+
+		for (var i = 0; i < computerHand.length; i++) {
+			if (CARDS[computerHand[i]].value < lowest && CARDS[computerHand[i]].suit != CARDS[rememberTrump].suit) {
+				lowestCard = i;
+				lowest = CARDS[computerHand[i]].value;
+			}
+		}
+
+		var card = computerHand.splice(lowestCard, 1)[0];
+		followPlayed = card;
+	} else {
+		// First, play higher cards of same suit
+		for (var i = 0; i < computerHand.length; i++) {
+			if (CARDS[computerHand[i]].suit == CARDS[leadPlayed].suit && CARDS[computerHand[i]].value > CARDS[leadPlayed].value) {
+				var card = computerHand.splice(i, 1)[0];
+				followPlayed = card;
+				return;
+			}
+		}
+
+		// Otherwise, play lowest card not of trump suit
+		var lowest = 12;  // Arbitrary value
+		var lowestCard = 0;
+
+		for (var i = 0; i < computerHand.length; i++) {
+			if (CARDS[computerHand[i]].value < lowest && CARDS[computerHand[i]].suit != CARDS[rememberTrump].suit) {
+				lowestCard = i;
+				lowest = CARDS[computerHand[i]].value;
+			}
+		}
+
+		var card = computerHand.splice(lowestCard, 1)[0];
+		followPlayed = card;
 	}
-	var card = computerHand.splice(lowestCard, 1)[0];
-	followPlayed = card;
 }
 
 // Logic for computer to play while on lead
 function computerPlayLead() {
+
 	// Always play lowest card not of trump suit
 	var lowest = 12;  // Arbitrary value
 	var lowestCard = 0;
@@ -332,7 +381,7 @@ function getYClick(e) {
 	return e.pageY - $("#gameCanvas").offset().top + $("#gameCanvas").scrollTop();
 }
 
-// Shuffle and return an array of cards
+// Return an array of cards in random order
 function shuffleCards() {
 	var cards = ["JACK_C", "QUEEN_C", "KING_C", "TEN_C", "ACE_C", "JACK_S", "QUEEN_S", "KING_S", "TEN_S", "ACE_S",
 			"JACK_H", "QUEEN_H", "KING_H", "TEN_H", "ACE_H", "JACK_D", "QUEEN_D", "KING_D", "TEN_D", "ACE_D"];

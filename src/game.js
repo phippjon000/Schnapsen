@@ -25,9 +25,12 @@ var leadPlayed = "";
 var followPlayed = "";
 
 // Game variables
+var humanStartLead = true;
 var humanOnLead = true;
 var stockClosed = false;
 var endGame = false;
+var winner = "";
+var gamePointsWon = 0;
 
 // Point variables
 var humanTrickPoints = 0;
@@ -60,14 +63,8 @@ function home() {
 		// Don't accept another click until finished
 		if (!clickLogged) {
 
-			// Shuffle and deal the deck
-			deck = shuffleCards();
-			humanHand = [deck[3], deck[4], deck[5], deck[9], deck[10]];
-			computerHand = [deck[0], deck[1], deck[2], deck[7], deck[8]];
-			computerSeen = computerHand;
-			trump = deck[6];
-			rememberTrump = trump;
-			deckPointer = 11;
+			// Shuffle and deal deck
+			newDeal();
 
 			// Remove this event handler so this code doesn't run in main game
 			$(this).off();
@@ -170,6 +167,11 @@ function update() {
 	ctx.fillText("Trick Points: " + computerTrickPoints, TALLY_X, COMPUTER_TRICK_POINT_Y);
 	ctx.fillText("Game Points: " + computerGamePoints, TALLY_X, COMPUTER_GAME_POINT_Y);
 
+	// Draw winner if applicable
+	if (winner != "") {
+		ctx.fillText(winner + " wins! -" + gamePointsWon + " game point(s)!", WINNER_X, WINNER_Y);
+	}
+
 	// Listen for click
 	$("#gameCanvas").click(function(e) {
 
@@ -204,6 +206,7 @@ function update() {
 // Play the selected card, computer plays if applicable, and decide winner
 function playCard(cardNum) {
 	var card = humanHand.splice(cardNum, 1)[0];
+	computerSeen.push(card);
 
 	if (humanOnLead) {
 		leadPlayed = card;
@@ -211,6 +214,7 @@ function playCard(cardNum) {
 	} else {
 		followPlayed = card;
 	}
+
 
 	// Let person see cards played for 2 seconds before putting them away
 	setTimeout(decideWinner, 2000);
@@ -228,31 +232,57 @@ function decideWinner() {
 
 	// Decide what cards to give to who and who new lead is
 	if (humanOnLead == leadWon) {
+
 		// Human won, give cards to them
 		humanTricks.push(leadPlayed, followPlayed);
 		humanTrickPoints += CARDS[leadPlayed].value + CARDS[followPlayed].value;
 		leadPlayed = "";
 		followPlayed = "";
 
-		// Don't deal more cards if there are no more cards left
-		if (deckPointer < 21) {
-			if (deckPointer == 19) {
-				// Deal out last two cards
-				humanHand.push(deck[deckPointer]);
-				computerHand.push(trump);
-				trump = "";
-				endGame = true;
+		// If human gains 66 or more points, they win
+		if (humanTrickPoints >= 66 || (humanHand.length == 0 && computerHand.length == 0)) {
+			winner = "Human";
+
+			if (computerTrickPoints == 0) {
+				gamePointsWon = 3;
+			} else if (computerTrickPoints < 33) {
+				gamePointsWon = 2;
 			} else {
-				// Deal cards normally
-				humanHand.push(deck[deckPointer]);
-				computerHand.push(deck[deckPointer + 1]);
+				gamePointsWon = 1;
 			}
 
-			deckPointer += 2;
-		}
+			humanGamePoints -= gamePointsWon;
 
-		// Set human lead for next trick
-		humanOnLead = true;
+			if (humanGamePoints <= 0) {
+				console.log("Human wins game!");
+			} else {
+				setTimeout(newDeal, 2000);
+			}
+		} else {
+
+			// Deal cards if there are more cards left
+			if (deckPointer < 21) {
+				if (deckPointer == 19) {
+
+					// Deal out last two cards
+					humanHand.push(deck[deckPointer]);
+					computerHand.push(trump);
+					trump = "";
+					endGame = true;
+				} else {
+
+					// Deal cards normally
+					humanHand.push(deck[deckPointer]);
+					computerHand.push(deck[deckPointer + 1]);
+					computerSeen.push(deck[deckPointer + 1]);
+				}
+
+				deckPointer += 2;
+			}
+
+			// Set human lead for next trick
+			humanOnLead = true;
+		}
 	} else {
 		// Computer won, give cards to it
 		computerTricks.push(leadPlayed, followPlayed);
@@ -260,26 +290,51 @@ function decideWinner() {
 		leadPlayed = "";
 		followPlayed = "";
 
-		// Don't deal more cards if there are no more cards left
-		if (deckPointer < 21) {
-			if (deckPointer == 19) {
-				// Deal out last two cards
-				humanHand.push(deck[deckPointer]);
-				computerHand.push(trump);
-				trump = "";
-				endGame = true;
+		// If computer gains 66 or more points, it wins
+		if (computerTrickPoints >= 66 || (computerHand.length == 0 && humanHand.length == 0)) {
+			winner = "Computer";
+			if (humanTrickPoints == 0) {
+				gamePointsWon = 3;
+			} else if (humanTrickPoints < 33) {
+				gamePointsWon = 2;
 			} else {
-				// Deal cards normally
-				humanHand.push(deck[deckPointer]);
-				computerHand.push(deck[deckPointer + 1]);
+				gamePointsWon = 1;
 			}
 
-			deckPointer += 2;
-		}
+			computerGamePoints -= gamePointsWon
 
-		// Set computer lead for next trick, and have computer play
-		humanOnLead = false;
-		computerPlayLead();
+			if (computerGamePoints <= 0) {
+				console.log("Computer wins game...");
+			} else {
+				setTimeout(newDeal, 2000);
+			}
+		} else {
+
+			// Deal cards if there are more cards left
+			if (deckPointer < 21) {
+				if (deckPointer == 19) {
+
+					// Deal out last two cards
+					computerHand.push(deck[deckPointer]);
+					computerSeen.push(deck[deckPointer]);
+					humanHand.push(trump);
+					trump = "";
+					endGame = true;
+				} else {
+
+					// Deal cards normally
+					computerHand.push(deck[deckPointer]);
+					computerSeen.push(deck[deckPointer]);
+					humanHand.push(deck[deckPointer + 1]);
+				}
+
+				deckPointer += 2;
+			}
+
+			// Set computer lead for next trick, and have computer play
+			humanOnLead = false;
+			computerPlayLead();
+		}
 	}
 }
 
@@ -330,6 +385,7 @@ function computerPlayFollow() {
 		var card = computerHand.splice(lowestCard, 1)[0];
 		followPlayed = card;
 	} else {
+
 		// First, play higher cards of same suit
 		for (var i = 0; i < computerHand.length; i++) {
 			if (CARDS[computerHand[i]].suit == CARDS[leadPlayed].suit && CARDS[computerHand[i]].value > CARDS[leadPlayed].value) {
@@ -369,6 +425,48 @@ function computerPlayLead() {
 	}
 	var card = computerHand.splice(lowestCard, 1)[0];
 	leadPlayed = card;
+}
+
+function newDeal() {
+	// Reset game variables
+	humanTricks = [];
+	computerTricks = [];
+	computerSeen = [];
+	stockClosed = false;
+	endGame = false;
+	winner = "";
+	gamePointsWon = 0;
+	humanTrickPoints = 0;
+	computerTrickPoints = 0;
+
+	// Shuffle the deck
+	deck = shuffleCards();
+
+	// Deal out cards based on who starts leading
+	if (humanStartLead) {
+		humanHand = [deck[0], deck[1], deck[2], deck[7], deck[8]];
+		computerHand = [deck[3], deck[4], deck[5], deck[9], deck[10]];
+		computerSeen = [deck[3], deck[4], deck[5], deck[9], deck[10]];
+	} else {
+		computerHand = [deck[0], deck[1], deck[2], deck[7], deck[8]];
+		computerSeen = [deck[0], deck[1], deck[2], deck[7], deck[8]];
+		humanHand = [deck[3], deck[4], deck[5], deck[9], deck[10]];
+	}
+
+	trump = deck[6];
+	computerSeen.push(trump);
+	rememberTrump = trump;
+	deckPointer = 11;
+
+	// Set the first lead
+	humanOnLead = humanStartLead;
+
+	if (!humanOnLead) {
+		computerPlayLead();
+	}
+
+	// Switch the first leader for the next game
+	humanStartLead = !humanStartLead;
 }
 
 // Return the X position of the click relative to the canvas

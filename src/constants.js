@@ -17,8 +17,10 @@ var TITLE_FONT = "bold 2em sans-serif",
 	HUMAN_NAME_Y = 560,
 	COMPUTER_NAME_X = 670,
 	COMPUTER_NAME_Y = 50,
+	TEXT_Y = 300,
+	MESSAGE_X = 600,
+	TRUMP_MSG_X = 30,
 	WINNER_X = 230,
-	WINNER_Y = 300;
 
 // Image Position Values
 var DECK_X = 30,

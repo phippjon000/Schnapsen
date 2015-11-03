@@ -280,7 +280,7 @@ function decideWinner() {
 		if (humanTrickPoints >= 66 || (humanHand.length == 0 && computerHand.length == 0)) {
 			winner = "Human";
 
-			if (computerTrickPoints == 0) {
+			if (computerTricks.length == 0) {
 				gamePointsWon = 3;
 			} else if (computerTrickPoints < 33) {
 				gamePointsWon = 2;
@@ -330,7 +330,7 @@ function decideWinner() {
 		// If computer gains 66 or more points, or it's the last trick, it wins
 		if (computerTrickPoints >= 66 || (computerHand.length == 0 && humanHand.length == 0)) {
 			winner = "Computer";
-			if (humanTrickPoints == 0) {
+			if (humanTricks.length == 0) {
 				gamePointsWon = 3;
 			} else if (humanTrickPoints < 33) {
 				gamePointsWon = 2;
